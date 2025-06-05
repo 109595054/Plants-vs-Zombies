@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
-project(REPLACE_WITH_YOUR_PROJECT_NAME)
+#project(REPLACE_WITH_YOUR_PROJECT_NAME)
+project(Plants_vs_Zombies)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -8,19 +9,20 @@ cmake_policy(SET CMP0135 NEW)
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
-FetchContent_Declare(
-    ptsd
+#FetchContent_Declare(
+#    ptsd
 
-    URL         https://github.com/ntut-open-source-club/practical-tools-for-simple-design/archive/refs/tags/v0.2.zip
+#    URL         http://github.com/ntut-open-source-club/practical-tools-for-simple-design/archive/refs/tags/v0.2.zip
 
     # Or alternatively if you want to use a specific git commit instead of a release:
     # GIT_REPOSITORY  https://github.com/ntut-open-source-club/practical-tools-for-simple-design.git
     # GIT_TAG         <git_tag>
 
-    SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/PTSD
-)
+#    SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/PTSD
+#)
 
-FetchContent_MakeAvailable(ptsd)
+#FetchContent_MakeAvailable(ptsd)
+add_subdirectory(ptsd)
 
 include(files.cmake)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -28,13 +30,43 @@ set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 list(TRANSFORM SRC_FILES PREPEND ${SRC_DIR}/)
 list(TRANSFORM INCLUDE_FILES PREPEND ${INCLUDE_DIR}/)
 
-# file(GLOB_RECURSE SRC_FILES src/*)
-# file(GLOB_RECURSE HEADER_FILES include/*)
+file(GLOB_RECURSE SRC_FILES src/*)
+file(GLOB_RECURSE HEADER_FILES include/*)
 
 add_executable(${PROJECT_NAME}
     ${SRC_DIR}/main.cpp
     ${SRC_FILES}
     ${HEADER_FILES}
+        include/BackgroundImage.hpp
+        include/Game_Define.h
+        include/SunFlower.hpp
+        src/SunFlower.cpp
+        include/CherryBomb.hpp
+        src/CherryBomb.cpp
+        include/WallNut.hpp
+        src/WallNut.cpp
+        include/UIText.hpp
+        src/UIText.cpp
+        include/UIImage.hpp
+        src/UIImage.cpp
+        include/CardManager.hpp
+        include/PlantCard.hpp
+        src/PlantCard.cpp
+        src/CardManager.cpp
+        include/PotatoMine.hpp
+        src/PotatoMine.cpp
+        include/SnowPea.hpp
+        src/SnowPea.cpp
+        include/Chomper.hpp
+        src/Chomper.cpp
+        include/FlagZombie.hpp
+        src/FlagZombie.cpp
+        include/BucketheadZombie.hpp
+        src/BucketheadZombie.cpp
+        include/ConeheadZombie.hpp
+        src/ConeheadZombie.cpp
+        include/LawnMower.hpp
+        src/LawnMower.cpp
 )
 
 if(MSVC)

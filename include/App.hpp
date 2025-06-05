@@ -2,6 +2,8 @@
 #define APP_HPP
 
 #include "pch.hpp" // IWYU pragma: export
+#include "BackgroundImage.hpp"
+#include "PVZGame.hpp"
 
 class App {
 public:
@@ -11,19 +13,16 @@ public:
         END,
     };
 
+    App();
+    void Start();
+    void Update();
+    void End(); // NOLINT(readability-convert-member-functions-to-static)
     State GetCurrentState() const { return m_CurrentState; }
 
-    void Start();
-
-    void Update();
-
-    void End(); // NOLINT(readability-convert-member-functions-to-static)
-
 private:
-    void ValidTask();
-
-private:
-    State m_CurrentState = State::START;
+    State m_CurrentState;
+    BackgroundImage m_back_ground;
+    std::unique_ptr<UIIMAGE> m_begin_game_image;
 };
 
 #endif

@@ -17,9 +17,9 @@ constexpr int LAWN_HEIGHT = 720;
 
 
 constexpr float ZOMBIE_SPEED = 20.0f;
-constexpr float FLAG_ZOMBIE_SPEED = 15.0f;
-constexpr float BUCKETHEAD_ZOMBIE_SPEED = 10.0f;
-constexpr float CONEHEAD_ZOMBIE_SPEED = 12.0f;
+constexpr float FLAG_ZOMBIE_SPEED = 20.0f;
+constexpr float BUCKETHEAD_ZOMBIE_SPEED = 20.0f;
+constexpr float CONEHEAD_ZOMBIE_SPEED = 20.0f;
 
 constexpr float BULLET_SPEED = 120.0f;
 constexpr int SUN_VALUE = 25;

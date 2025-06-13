@@ -22,7 +22,7 @@ set(FETCHCONTENT_QUIET FALSE)
 #)
 
 #FetchContent_MakeAvailable(ptsd)
-add_subdirectory(ptsd)
+add_subdirectory(practical-tools-for-simple-design)
 
 include(files.cmake)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -83,7 +83,7 @@ else()
 endif()
 
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${DEPENDENCY_INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/PTSD/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/practical-tools-for-simple-design/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(${PROJECT_NAME}

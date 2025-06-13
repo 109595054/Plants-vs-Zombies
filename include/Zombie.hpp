@@ -8,9 +8,9 @@
 class Zombie : public Util::GameObject 
 {
 public:
-    Zombie(ZombieType type, int grid_y, int y, float health, float speed, const std::vector<std::string> &paths, const std::vector<std::string> &attack_paths);
+    Zombie(ZombieType type, int grid_y, int y, float health, float speed, int monster_id, const std::vector<std::string> &paths, const std::vector<std::string> &attack_paths);
     virtual void Update();
-    virtual void TakeDamage(float damage);
+    virtual void TakeDamage(float damage, bool is_die = false);
 
     void StartEating();
     void StopEating();
@@ -24,6 +24,7 @@ public:
     float GetHealth() const { return m_health; }
     bool IsCanAttack() const;
     bool IsDie() const { return m_is_die;}
+    int GetMonsterid() const {return m_monster_id;}
     
 protected:
     std::shared_ptr<Util::Animation> m_animation;
@@ -40,6 +41,7 @@ protected:
     int  m_die_time;
     bool m_is_slow_down;
     int m_start_slow_down_time;
+    int m_monster_id;
 };
 
 #endif

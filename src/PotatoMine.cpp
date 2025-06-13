@@ -41,7 +41,7 @@ void PotatoMine::Update()
         }
     }
 
-    if (m_armed) {
+    if (m_armed && !m_exploded) {
         if (PVZGame::GetInstance().CheckPotatoMineExplod(m_Transform.translation.x, m_Transform.translation.y, POTATO_MINE_EXPLOSION_RADIUS)) {
             PVZGame::GetInstance().PotatoMineExplod(m_Transform.translation.x, m_Transform.translation.y, POTATO_MINE_EXPLOSION_RADIUS, POTATO_MINE_EXPLOSION_DAMAGE);
             m_exploded = true;

@@ -38,7 +38,7 @@ void LawnMower::Update()
     {
         m_Transform.translation.x += m_speed * (Util::Time::GetDeltaTimeMs() / 1000.0f);
         m_active_animation->Play();
-        PVZGame::GetInstance().CheckLawnerTrigger(m_grid_y, m_Transform.translation.x, 60.0f);
+        PVZGame::GetInstance().CheckLawnerTrigger(m_grid_y, m_Transform.translation.x, 80.0f);
 
         if (m_Transform.translation.x > LAWN_END_X + 100)
         {

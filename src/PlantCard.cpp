@@ -50,8 +50,9 @@ void PlantCard::StartDrag()
 
 bool PlantCard::IsMouseClick(float mouse_x, float mouse_y) const
 {
-    bool is_click = mouse_x >= m_original_x && mouse_x <= m_original_x + CARD_WIDTH &&  mouse_y >= 275 && mouse_y <= 359;
-   // LOG_INFO("PlantCard::IsMouseClick plant card: ({}, {}, {}, {}, {}, {}, {})", mouse_x, mouse_y, m_original_x, m_original_y, CARD_WIDTH, CARD_HEIGHT, is_click);
+    bool is_click = mouse_x >= m_original_x - CARD_WIDTH / 2 && mouse_x <= m_original_x + CARD_WIDTH / 2 &&  mouse_y >= 275 && mouse_y <= 359;
+    //LOG_INFO("PlantCard::IsMouseClick plant card: ({}, {}, {}, {}, {}, {}, {})", mouse_x, mouse_y, m_original_x - CARD_WIDTH / 2,
+     //  m_original_x + CARD_WIDTH / 2, CARD_WIDTH, CARD_HEIGHT, is_click);
 
     return is_click;
 }

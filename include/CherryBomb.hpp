@@ -4,7 +4,7 @@
 #include "Plant.hpp"
 #include "Game_Define.h"
 
-static constexpr float EXPLOSION_RADIUS = 100.0f;
+static constexpr float EXPLOSION_RADIUS = 200.0f;
 static constexpr float EXPLOSION_DAMAGE = 1800.0f;
 
 class CherryBomb : public Plant

@@ -6,8 +6,8 @@
 class BucketHeadZombie : public Zombie
 {
 public:
-    BucketHeadZombie(int grid_y, float y, float health, const std::vector<std::string>& paths, const std::vector<std::string> &attack_paths);
-    void TakeDamage(float damage) override;
+    BucketHeadZombie(int grid_y, float y, float health, int monster_id, const std::vector<std::string>& paths, const std::vector<std::string> &attack_paths);
+    void TakeDamage(float damage, bool is_die = false) override;
 
 private:
     bool m_bucket_destroyed;

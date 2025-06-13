@@ -38,7 +38,7 @@ void CherryBomb::Update()
     Plant::Update();
     if (!m_exploded) {
         m_fuse_time += Util::Time::GetDeltaTimeMs();
-        if (!m_exploded && m_fuse_time >= 2000.0f) {
+        if (!m_exploded && m_fuse_time >= 1500.0f) {
             m_exploded = true;
             m_explosion_time = 0;
             m_animation->Pause();

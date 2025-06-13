@@ -51,7 +51,7 @@ void CardManager::InitCard(int level)
         CreateCard(PlantType::SNOWPEA, 6, SNOWPEA_COST, RESOURCE_DIR"/card/card_snowpea.png", RESOURCE_DIR"/card/card_snowpea_drag.png");
     }
 
-    if (level > 9) {
+    if (level > 8) {
         CreateCard(PlantType::CHOMPER, 7, CHOMPER_COST, RESOURCE_DIR"/card/card_chomper.png", RESOURCE_DIR"/card/card_chomper_drag.png");
     }
 

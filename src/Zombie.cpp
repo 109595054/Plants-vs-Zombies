@@ -3,7 +3,7 @@
 #include "Util/Time.hpp"
 #include "Util/Logger.hpp"
 
-Zombie::Zombie(ZombieType type, int grid_y, int y, float health, float speed, const std::vector<std::string> &paths, const std::vector<std::string> &attack_paths)
+Zombie::Zombie(ZombieType type, int grid_y, int y, float health, float speed, int monster_id, const std::vector<std::string> &paths, const std::vector<std::string> &attack_paths)
 : m_animation(std::make_unique<Util::Animation>(paths, true, 50, true, 1000))
 , m_attack_animation(std::make_unique<Util::Animation>(attack_paths, false, 50, true, 1000))
 , m_death_animation(std::make_unique<Util::Animation>(std::vector<std::string>{
@@ -40,6 +40,7 @@ Zombie::Zombie(ZombieType type, int grid_y, int y, float health, float speed, co
 , m_die_time(0)
 , m_is_slow_down(false)
 , m_start_slow_down_time(0)
+, m_monster_id(monster_id)
 {
     m_Transform.translation.x = LAWN_WIDTH / 2;
     m_Transform.translation.y = y;
@@ -53,7 +54,16 @@ void Zombie::Update()
         return;
     }
 
-    m_animation->Play();
+    if (m_eating) {
+        m_attack_animation->Play();
+    }
+    else if (m_is_die) {
+       // m_death_animation->Play();
+    }
+    else {
+        m_animation->Play();
+    }
+
     Draw();
 
     m_start_slow_down_time += Util::Time::GetDeltaTimeMs();
@@ -87,13 +97,17 @@ void Zombie::Update()
 }
 
 
-void Zombie::TakeDamage(float damage) 
+void Zombie::TakeDamage(float damage, bool is_die)
 {
     if (m_is_die || m_destroyed) {
         return;
     }
 
     m_health -= damage;
+    if (is_die) {
+        m_health = 0;
+    }
+
     if (m_health <= 0)
     {
         m_is_die = true;
@@ -120,6 +134,10 @@ void Zombie::StartEating()
 
 void Zombie::StopEating()
 {
+    if (m_is_die || m_destroyed) {
+        return;
+    }
+
     m_eating = false;
     m_attack_animation->Pause();
     SetDrawable(m_animation);

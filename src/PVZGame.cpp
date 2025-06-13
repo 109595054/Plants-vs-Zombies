@@ -42,8 +42,12 @@ PVZGame::PVZGame()
 , m_wave_interval(10000.0f)
 , m_final_wave(false)
 , m_is_background_music_playing(false)
+, m_background_music_pos(0.0f)
 , m_is_wave_warning_playing(false)
 , m_wave_warning_start_time(0)
+, m_is_plant_music_playing(false)
+, m_plant_music_start_time(0)
+, monster_id(0)
 {
     m_random.seed(std::chrono::steady_clock::now().time_since_epoch().count());
     m_suns.clear();
@@ -57,7 +61,7 @@ PVZGame::PVZGame()
 
     char level_str[128];
     snprintf(level_str, sizeof(level_str), "level:%d", m_level);
-    m_level_text = std::make_unique<UIText>(RESOURCE_DIR"/fonts/Inter.ttf", level_str, 24, 600, -350);
+    m_level_text = std::make_unique<UIText>(RESOURCE_DIR"/fonts/Inter.ttf", level_str, 24, 500, -350);
     m_level_text->Start();
 
     m_card_manager = std::make_unique<CardManager>();
@@ -68,14 +72,19 @@ PVZGame::PVZGame()
     m_background_music = std::make_unique<Util::BGM>(RESOURCE_DIR"/audio/music/2.75.mp3");
     m_wave_warning_music = std::make_unique<Util::BGM>(RESOURCE_DIR"/audio/music/awooga.mp3");
     m_lose_music = std::make_unique<Util::BGM>(RESOURCE_DIR"/audio/music/losemusic.mp3");
+    m_plant_music = std::make_unique<Util::BGM>(RESOURCE_DIR"/audio/music/plant1.mp3");
+
+    m_wave_progress_text = std::make_unique<UIText>(RESOURCE_DIR"/fonts/Inter.ttf", "Wave: 0/0", 24, 500, -300);
+    m_wave_progress_text->Start();
+
+    m_zombie_count_text = std::make_unique<UIText>(RESOURCE_DIR"/fonts/Inter.ttf", "Zombies: 0/0", 24, 500, -250);
+    m_zombie_count_text->Start();
 }
 
 void PVZGame::Start(int level)
 {
     LOG_INFO("Starting Plants vs Zombies Level {}!", level);
-    if (level == 1) {
-        PlayBackgroundMusic();
-    }
+    PlayBackgroundMusic();
 
     m_game_status = GAME_STATUS_PLAYING;
     m_level = level;
@@ -102,21 +111,40 @@ void PVZGame::Update()
     if (m_game_status == GAME_STATUS_OVER)
     {
         m_game_over_image->Update();
-        return;
-    }
-
-    if (m_game_status == GAME_STATUS_WIN)
-    {
-        m_success_text->Update();
-        if (Util::Input::IsKeyDown(Util::Keycode::SPACE) || Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB))
+        if (Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB))
         {
-            Start(m_level + 1);
+            m_game_status = GAME_STATUS_NONE;
+            PasueBackgroundMusic();
+            PasueLoseMusic();
         }
 
         return;
     }
 
-    //UpdateBGM();
+    if (m_game_status == GAME_STATUS_WIN)
+    {
+        if (m_level == 10) {
+            m_success_text->SetStrText("thank you for playing");
+            m_success_text->Update();
+            if (Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB))
+            {
+                m_game_status = GAME_STATUS_NONE;
+                PasueBackgroundMusic();
+            }
+        }
+        else {
+            m_success_text->SetStrText("Game Win");
+            m_success_text->Update();
+            if (Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB))
+            {
+                Start(m_level + 1);
+            }
+        }
+
+        return;
+    }
+
+    UpdateBGM();
 
     RefreshSun();
     RecycleSun();
@@ -131,18 +159,23 @@ void PVZGame::Update()
     HandleInput();
     CheckCollisions();
 
+    UpdateProgress();
+
     m_score_text->Update();
     m_score_image->Update();
     m_level_text->Update();
     m_back_image->Update();
+    m_wave_progress_text->Update();
+    m_zombie_count_text->Update();
 
     m_card_manager->Update();
 
     CheckGameOver();
     UpdateLawnMower();
+
 }
 
-bool PVZGame::CheckBulletCollisions(float x, float y, bool is_slow_down)
+bool PVZGame::CheckBulletCollisions(float x, float y, bool is_slow_down, float damage)
 {
     bool bulletHit = false;
     for (auto& zombie : m_zombies)
@@ -161,7 +194,7 @@ bool PVZGame::CheckBulletCollisions(float x, float y, bool is_slow_down)
                 zombie->SlowDown();
             }
 
-            zombie->TakeDamage(25.0f);
+            zombie->TakeDamage(damage);
             bulletHit = true;
             break;
         }
@@ -175,7 +208,7 @@ bool PVZGame::ShouldShoot(int grid_x) {
     bool shoot = false;
     for (auto& zombie : m_zombies)
     {
-        if (zombie->IsDestroyed()) {
+        if (zombie->IsDestroyed() || !zombie->IsCanAttack()) {
             continue;
         }
 
@@ -239,7 +272,7 @@ void PVZGame::CherryBombExplod(float x, float y, float radius, float damage) {
         float dy = y - zombie->GetTransform().translation.y;
         float distance = sqrt(dx*dx + dy*dy);
         if (distance <= radius) {
-            zombie->TakeDamage(damage);
+            zombie->TakeDamage(damage, true);
             LOG_INFO("CherryBomb damaged zombie at x {} y {} distance: {} with radius: {} damage: {}", x, y, distance, radius, damage);
         }
     }
@@ -271,7 +304,7 @@ bool PVZGame::CheckPotatoMineExplod(float x, float y, float radius) {
 void PVZGame::PotatoMineExplod(float x, float y, float radius, float damage) {
     for (auto& zombie : m_zombies)
     {
-        if (zombie->IsDestroyed()) {
+        if (!zombie->IsCanAttack()) {
             continue;
         }
 
@@ -279,8 +312,9 @@ void PVZGame::PotatoMineExplod(float x, float y, float radius, float damage) {
         float dy = y - zombie->GetTransform().translation.y;
         float distance = sqrt(dx*dx + dy*dy);
         if (distance <= radius) {
-            zombie->TakeDamage(damage);
+            zombie->TakeDamage(damage, true);
             LOG_INFO("PotatoMine damaged zombie at x {} y {} distance: {} with radius: {} damage: {}", x, y, distance, radius, damage);
+            break;
         }
     }
 }
@@ -290,15 +324,15 @@ bool PVZGame::CheckChomperDigest(float x, float y)
 {
     for (auto& zombie : m_zombies)
     {
-        if (zombie->IsDestroyed()) {
+        if (zombie->IsDestroyed() || zombie->IsDie()) {
             continue;
         }
 
         float dx = x - zombie->GetTransform().translation.x;
         float dy = y - zombie->GetTransform().translation.y;
         float distance = sqrt(dx*dx + dy*dy);
-        if (distance <= 50.0f) {
-            zombie->TakeDamage(zombie->GetHealth());
+        if (distance <= 58.0f) {
+            zombie->TakeDamage(zombie->GetHealth(), true);
             LOG_INFO("Chomper damaged zombie at x {} y {} distance: {} with radius: {} damage: {}", x, y, distance);
             return true;
         }
@@ -309,16 +343,18 @@ bool PVZGame::CheckChomperDigest(float x, float y)
 
 
 void PVZGame::CheckLawnerTrigger(int grid_y, float x, float radius) {
+    //LOG_INFO("Lawn mower destroyed zombie grid_y {}, x {}", grid_y, x);
+
     for (auto& zombie : m_zombies)
     {
         if (zombie->IsDestroyed() || zombie->IsDie()) {
             continue;
         }
 
-        LOG_INFO("Lawn mower destroyed zombie at ({}, {}), grid_y {}, x {}",zombie->GetTransform().translation.x, zombie->GetTransform().translation.y, grid_y, x);
+        //LOG_INFO("Lawn mower destroyed zombie at ({}, {}), grid_y {}, x {}",zombie->GetTransform().translation.x, zombie->GetTransform().translation.y, grid_y, x);
         if (zombie->GetGridy() == grid_y && fabs(zombie->GetTransform().translation.x - x) < radius) {
-            zombie->TakeDamage(zombie->GetHealth());
-            LOG_INFO("Lawn mower destroyed zombie at ({}, {}), grid_y {}, x {}",zombie->GetTransform().translation.x, zombie->GetTransform().translation.y, grid_y, x);
+            zombie->TakeDamage(zombie->GetHealth(), true);
+            //LOG_INFO("Lawn mower destroyed zombie at ({}, {}), grid_y {}, x {}",zombie->GetTransform().translation.x, zombie->GetTransform().translation.y, grid_y, x);
         }
     }
 }
@@ -371,7 +407,7 @@ void PVZGame::DrawSun()
 }
 
 
-void PVZGame::GenZombie(ZombieType type)
+void PVZGame::GenZombie(ZombieType type, int monster_id)
 {
     std::uniform_int_distribution<int> xDist(0, GRID_ROWS - 1);
     float gridY = xDist(m_random);
@@ -396,7 +432,7 @@ void PVZGame::GenZombie(ZombieType type)
             attack_paths.push_back(path);
         }
 
-        m_zombies.push_back(std::make_unique<Zombie>(ZombieType::NORMAL_ZOMBIE, gridY, centerY, 100, ZOMBIE_SPEED, paths, attack_paths));
+        m_zombies.push_back(std::make_unique<Zombie>(ZombieType::NORMAL_ZOMBIE, gridY, centerY, 100, ZOMBIE_SPEED, monster_id, paths, attack_paths));
     }
     else if (type == ZombieType::FLAG_ZOMBIE) {
         for (int i = 1; i <= 11; i++) {
@@ -409,7 +445,7 @@ void PVZGame::GenZombie(ZombieType type)
             attack_paths.push_back(path);
         }
 
-        m_zombies.push_back(std::make_unique<FlagZombie>(gridY, centerY, 100, paths, attack_paths));
+        m_zombies.push_back(std::make_unique<FlagZombie>(gridY, centerY, 100, monster_id, paths, attack_paths));
     }
     else if (type == ZombieType::CONEHEAD_ZOMBIE) {
         for (int i = 0; i <= 20; i++) {
@@ -422,7 +458,7 @@ void PVZGame::GenZombie(ZombieType type)
             attack_paths.push_back(path);
         }
 
-        m_zombies.push_back(std::make_unique<ConeheadZombie>(gridY, centerY, 100, paths, attack_paths));
+        m_zombies.push_back(std::make_unique<ConeheadZombie>(gridY, centerY, 100, monster_id, paths, attack_paths));
     }
     else if (type == ZombieType::BUCKETHEAD_ZOMBIE) {
         for (int i = 0; i <= 14; i++) {
@@ -435,7 +471,7 @@ void PVZGame::GenZombie(ZombieType type)
             attack_paths.push_back(path);
         }
 
-        m_zombies.push_back(std::make_unique<BucketHeadZombie>(gridY, centerY, 100, paths, attack_paths));
+        m_zombies.push_back(std::make_unique<BucketHeadZombie>(gridY, centerY, 100, monster_id, paths, attack_paths));
     }
 
 
@@ -454,13 +490,14 @@ void PVZGame::RefreshZombie()
     }
 
     float currentTime = Util::Time::GetElapsedTimeMs();
-    float spaw_interval = m_final_wave ? 2000.0f : 3000.0f;
+    float spaw_interval = m_final_wave ? 3000.0f : 6000.0f;
 
     if (currentTime - m_last_zombie_time > spaw_interval)
     {
         ZombieType zombieType = GetZombieTypeForLevel(m_level);
-        GenZombie(zombieType);
+        GenZombie(zombieType, monster_id);
         m_zombies_spawned_in_wave++;
+        monster_id++;
         m_last_zombie_time = currentTime;
 
         LOG_INFO("Spawned zombie {}/{} for wave {}", m_zombies_spawned_in_wave, m_zombies_in_current_wave, m_current_wave);
@@ -616,7 +653,7 @@ void PVZGame::PlacePlant(int grid_x, int grid_y, float mouse_x, float mouse_y,  
         {
             if (m_collect_sun_score >= SNOWPEA_COST)
             {
-                m_plants.push_back(std::make_unique<SnowPea>(grid_x, grid_y, mouse_x, mouse_y, 600.f));
+                m_plants.push_back(std::make_unique<SnowPea>(grid_x, grid_y, mouse_x, mouse_y, 300.f));
                 m_collect_sun_score -= SNOWPEA_COST;
                 m_score_text->SetStrText(std::to_string(m_collect_sun_score));
                 m_card_manager->RefreshCard(m_collect_sun_score);
@@ -633,7 +670,7 @@ void PVZGame::PlacePlant(int grid_x, int grid_y, float mouse_x, float mouse_y,  
         {
             if (m_collect_sun_score >= CHOMPER_COST)
             {
-                m_plants.push_back(std::make_unique<Chomper>(grid_x, grid_y, mouse_x, mouse_y, 600.f));
+                m_plants.push_back(std::make_unique<Chomper>(grid_x, grid_y, mouse_x, mouse_y, 300.f));
                 m_collect_sun_score -= CHOMPER_COST;
                 m_score_text->SetStrText(std::to_string(m_collect_sun_score));
                 m_card_manager->RefreshCard(m_collect_sun_score);
@@ -652,10 +689,7 @@ void PVZGame::PlacePlant(int grid_x, int grid_y, float mouse_x, float mouse_y,  
     }
 
     if (is_suc) {
-        PasueBackgroundMusic();
-        auto bgm = Util::BGM(RESOURCE_DIR"/audio/music/plant1.mp3");
-        bgm.Play(0);
-        ResumeBackgroundMusic();
+        PlayPlantMusic();
     }
 }
 
@@ -680,8 +714,7 @@ void PVZGame::RecyclePlant()
 
 void PVZGame::CheckGameOver()
 {
-    for (int i = 0; i < GRID_ROWS; ++i)
-    {
+    for (int i = 0; i < GRID_ROWS; ++i) {
         bool hasLawnMowerInRow = false;
         bool hasZombieReachHouse = false;
         for (auto& zombie : m_zombies)
@@ -693,11 +726,11 @@ void PVZGame::CheckGameOver()
 
             if (zombie->HasReachedHouse())
             {
-                LOG_INFO("PVZGame::CheckGameOver, {0}", zombie->GetGridy());
+                LOG_INFO("PVZGame::CheckGameOver, monster_id:{} grid_y:{}", zombie->GetMonsterid(), zombie->GetGridy());
                 hasZombieReachHouse = true;
                 for (auto& lawnmower : m_lawn_mowers)
                 {
-                    if (!lawnmower->IsDestroyed() && !lawnmower->IsActive() && lawnmower->GetGridY() == zombie->GetGridy())
+                    if (!lawnmower->IsDestroyed() && lawnmower->GetGridY() == zombie->GetGridy())
                     {
                         lawnmower->Active();
                         hasLawnMowerInRow = true;
@@ -720,36 +753,6 @@ void PVZGame::CheckGameOver()
             break;
         }
     }
-
-    /*for (auto& zombie : m_zombies)
-    {
-        if (zombie->IsDestroyed() || zombie->IsDie()) {
-            continue;
-        }
-
-        if (zombie->HasReachedHouse())
-        {
-            bool hasLawnMowerInRow = false;
-            for (auto& lawnmower : m_lawn_mowers)
-            {
-                if (!lawnmower->IsDestroyed() && !lawnmower->IsActive() && lawnmower->GetGridY() == zombie->GetGridy())
-                {
-                    lawnmower->Active();
-                    hasLawnMowerInRow = true;
-                    LOG_INFO("PVZGame::CheckGameOver, {}", zombie->GetGridy());
-                    break;
-                }
-            }
-
-            if (!hasLawnMowerInRow) {
-                m_game_status = GAME_STATUS_OVER;
-                m_game_over_image->SetVisible(true);
-                PlayLoseMusic();
-                LOG_INFO("Game Over! Zombies reached your house and no lawn mower available!");
-                break;
-            }
-        }
-    }*/
 }
 
 
@@ -757,7 +760,8 @@ void PVZGame::HandleInput()
 {
     auto mousePos = Util::Input::GetCursorPosition();
     if (Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB)) {
-        m_card_manager->OnMouseLBPressed(mousePos);
+        glm::vec2 mouseVec2 = static_cast<glm::vec2>(mousePos);
+        m_card_manager->OnMouseLBPressed(mouseVec2);
     }
 
     if (Util::Input::IsKeyUp(Util::Keycode::MOUSE_LB))
@@ -778,6 +782,9 @@ void PVZGame::HandleInput()
                 float cellHeight = (LAWN_END_Y - LAWN_START_Y) / static_cast<float>(GRID_ROWS);
                 float centerX = LAWN_START_X + gridX * cellWidth + cellWidth / 2.0f;
                 float centerY = LAWN_START_Y + gridY * cellHeight + cellHeight / 2.0f;
+                if (centerX > LAWN_END_X) {
+                    centerX = LAWN_END_X - cellWidth / 2.0f;
+                }
 
                 PlantType draggedPlantType = m_card_manager->GetDraggedPlantType();
                 PlacePlant(gridX, gridY, centerX, centerY, draggedPlantType);
@@ -799,7 +806,7 @@ void PVZGame::HandleInput()
 void PVZGame::CheckCollisions()
 {
     for (auto& zombie : m_zombies) {
-        if (zombie->IsDestroyed()) {
+        if (zombie->IsDestroyed() || zombie->IsDie()) {
             continue;
         }
 
@@ -907,10 +914,13 @@ void PVZGame::UpdateWave()
 int PVZGame::GetZombiesPerWave(int level, int wave)
 {
     // 基础僵尸数量 + 关卡奖励 + 波数奖励
-    int base_zombies = 3;
+    int base_zombies = 1;
     int level_bonus = (level - 1) * 2;
     int wave_bonus = (wave - 1) * 1;
-    return base_zombies + level_bonus + wave_bonus;
+    int total_zombies = base_zombies + level_bonus + wave_bonus;
+
+    //LOG_INFO("PVZGame::GetZombiesPerWave level:{} wave:{} total_zombies:{}", level, wave, total_zombies);
+    return total_zombies;
 }
 
 
@@ -959,6 +969,9 @@ void PVZGame::PasueBackgroundMusic()
 {
     if (m_is_background_music_playing) 
     {
+        m_background_music->GetMusicPosition(m_background_music_pos);
+        LOG_INFO("PVZGame::PasueBackgroundMusic {}", m_background_music_pos);
+
         m_background_music->Pause();
         m_is_background_music_playing = false;
 
@@ -970,7 +983,7 @@ void PVZGame::PasueBackgroundMusic()
 void PVZGame::ResumeBackgroundMusic() {
     if (!m_is_background_music_playing)
     {
-        m_background_music->Resume();
+        m_background_music->PlayMusicInPosition(m_background_music_pos);
         m_is_background_music_playing = true;
 
         LOG_INFO("Background music resume");
@@ -1005,6 +1018,30 @@ void PVZGame::PlayLoseMusic()
     }
 }
 
+
+void PVZGame::PasueLoseMusic() {
+    if (m_lose_music)
+    {
+        m_lose_music->Pause();
+    }
+}
+
+
+void PVZGame::PlayPlantMusic() {
+    if (m_plant_music) {
+        PasueBackgroundMusic();
+
+        m_plant_music->SetVolume(70);
+        m_plant_music->Play(0);
+        m_is_plant_music_playing = true;
+        m_plant_music_start_time = Util::Time::GetElapsedTimeMs();
+
+        LOG_INFO("Plant music played");
+    }
+
+}
+
+
 void PVZGame::UpdateBGM() 
 {
     if (m_is_wave_warning_playing)
@@ -1013,6 +1050,14 @@ void PVZGame::UpdateBGM()
         if (currentTime - m_wave_warning_start_time > 4000.0f)
         {
             m_is_wave_warning_playing = false;
+            ResumeBackgroundMusic();
+        }
+    }
+
+    if (m_is_plant_music_playing) {
+        float currentTime = Util::Time::GetElapsedTimeMs();
+        if (currentTime - m_plant_music_start_time > 500.0f) {
+            m_is_plant_music_playing = false;
             ResumeBackgroundMusic();
         }
     }
@@ -1051,7 +1096,44 @@ void PVZGame::UpdateLawnMower()
     }
 }
 
+void PVZGame::UpdateProgress()
+{
+    char wave_text[128];
+    snprintf(wave_text, sizeof(wave_text), "Wave: %d/%d", m_current_wave, m_total_waves);
+    m_wave_progress_text->SetStrText(wave_text);
+
+    int total_remaining = GetTotalRemainingZombies();
+    int current_zombies = static_cast<int>(m_zombies.size());
+
+    char zombie_text[128];
+    snprintf(zombie_text, sizeof(zombie_text),"Zombies: %d | Left: %d",current_zombies,total_remaining);
+    m_zombie_count_text->SetStrText(zombie_text);
+}
 
 
+int PVZGame::GetRemainingZombiesInWave()
+{
+    if (m_wave_status != WAVE_SPAWNING)
+    {
+        return 0;
+    }
 
+    return m_zombies_in_current_wave - m_zombies_spawned_in_wave;
+}
+
+int PVZGame::GetTotalRemainingZombies()
+{
+    int total = static_cast<int>(m_zombies.size());
+    if (m_wave_status == WAVE_SPAWNING)
+    {
+        total += GetRemainingZombiesInWave();
+    }
+
+    for (int wave = m_current_wave + 1; wave <= m_total_waves; wave++)
+    {
+        total += GetZombiesPerWave(m_level, wave);
+    }
+
+    return total;
+}
 

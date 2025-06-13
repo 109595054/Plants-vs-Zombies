@@ -30,7 +30,7 @@ public:
 
     int GetGameState() const { return m_game_status; }
 
-    bool CheckBulletCollisions(float x, float y, bool is_slow_down);
+    bool CheckBulletCollisions(float x, float y, bool is_slow_down, float damage);
     bool ShouldShoot(int grid_x);
     void GenSun(float x = 99999, float y = 99999);
     bool CheckCherryBombExplod(float x, float y, float radius);
@@ -49,7 +49,7 @@ private:
     void RecycleSun();
     void DrawSun();
     
-    void GenZombie(ZombieType type);
+    void GenZombie(ZombieType type, int monster_id);
     void RefreshZombie();
     void RecycleZombie();
 
@@ -72,9 +72,15 @@ private:
     void ResumeBackgroundMusic();
     void PlayWaveWarning();
     void PlayLoseMusic();
+    void PasueLoseMusic();
+    void PlayPlantMusic();
 
     void InitLawnMower();
     void UpdateLawnMower();
+
+    void UpdateProgress();
+    int GetRemainingZombiesInWave();
+    int GetTotalRemainingZombies();
 
     int m_level;
     int m_game_status;
@@ -108,15 +114,26 @@ private:
     float m_wave_interval;
     bool m_final_wave;
 
-    std::unique_ptr<Util::BGM> m_background_music;
-    std::unique_ptr<Util::BGM> m_wave_warning_music;
-    std::unique_ptr<Util::BGM> m_lose_music;
-
     bool m_is_background_music_playing;
+    std::unique_ptr<Util::BGM> m_background_music;
+    double m_background_music_pos;
+
     bool m_is_wave_warning_playing;
     float m_wave_warning_start_time;
+    std::unique_ptr<Util::BGM> m_wave_warning_music;
+
+    std::unique_ptr<Util::BGM> m_lose_music;
+
+    bool m_is_plant_music_playing;
+    float m_plant_music_start_time;
+    std::unique_ptr<Util::BGM> m_plant_music;
 
     std::vector<std::unique_ptr<LawnMower>> m_lawn_mowers;
+
+    std::unique_ptr<UIText> m_wave_progress_text;
+    std::unique_ptr<UIText> m_zombie_count_text;
+
+    int monster_id;
 };
 
 #endif

@@ -16,9 +16,9 @@ void SnowPea::Update()
 {
     Plant::Update();
     float currentTime = Util::Time::GetElapsedTimeMs();
-    if (currentTime - m_last_shoot_time > 1000.0f && PVZGame::GetInstance().ShouldShoot(m_grid_y))
+    if (currentTime - m_last_shoot_time > 6000.0f && PVZGame::GetInstance().ShouldShoot(m_grid_y))
     {
-        m_bullets.push_back(std::make_unique<Bullet>(m_Transform.translation.x, m_Transform.translation.y + 14,  BULLET_SPEED, true, RESOURCE_DIR"/plant/PeaIce_0.png"));
+        m_bullets.push_back(std::make_unique<Bullet>(m_Transform.translation.x, m_Transform.translation.y + 14,  BULLET_SPEED, true, RESOURCE_DIR"/plant/PeaIce_0.png", 15));
         m_last_shoot_time = currentTime;
     }
 

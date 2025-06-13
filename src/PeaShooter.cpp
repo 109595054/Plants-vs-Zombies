@@ -18,9 +18,9 @@ void PeaShooter::Update()
     float currentTime = Util::Time::GetElapsedTimeMs();
     
     // Shoot every 2 seconds if zombies are present
-    if (currentTime - m_last_shoot_time > 2000.0f && PVZGame::GetInstance().ShouldShoot(m_grid_y))
+    if (currentTime - m_last_shoot_time > 4000.0f && PVZGame::GetInstance().ShouldShoot(m_grid_y))
     {
-        m_bullets.push_back(std::make_unique<Bullet>(m_Transform.translation.x, m_Transform.translation.y + 14,  BULLET_SPEED,  false, RESOURCE_DIR"/plant/PeaNormal_0.png"));
+        m_bullets.push_back(std::make_unique<Bullet>(m_Transform.translation.x, m_Transform.translation.y + 14,  BULLET_SPEED,  false, RESOURCE_DIR"/plant/PeaNormal_0.png", 10));
         m_last_shoot_time = currentTime;
     }
 

@@ -25,10 +25,9 @@ void Chomper::Update()
         return;
     }
 
-    Plant::Update();
     if (m_is_digesting) {
         m_digest_start_time += Util::Time::GetDeltaTimeMs();
-        if (m_digest_start_time >= 2000.0f) {
+        if (m_digest_start_time >= 16000.0f) {
             m_is_digesting = false;
             m_digest_start_time = 0.0f;
             m_digesting_animation->Pause();
@@ -44,5 +43,11 @@ void Chomper::Update()
             SetDrawable(m_digesting_animation);
             m_digesting_animation->Play();
         }
+        else {
+            SetDrawable(m_animation);
+            m_animation->Play();
+        }
     }
+
+    Draw();
 }
